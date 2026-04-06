@@ -17,7 +17,7 @@ const AnimatedBackground = () => {
     () => ({
       background: {
         color: {
-          value: "#0a0a0a", // CHANGED: Set background to near-black
+          value: "transparent",
         },
       },
       fpsLimit: 60,
@@ -25,23 +25,28 @@ const AnimatedBackground = () => {
         events: {
           onHover: {
             enable: true,
-            mode: "repulse",
+            mode: "grab",
           },
         },
         modes: {
-          repulse: {
-            distance: 100,
-            duration: 0.4,
+          grab: {
+            distance: 140,
+            links: {
+              opacity: 0.22,
+            },
           },
         },
       },
       particles: {
         color: {
-          // CHANGED: Vibrant particle colors
-          value: ["#8a2be2", "#00ff99", "#4b0082"], 
+          value: ["#146f92", "#eb7d22", "#3e8da8"],
         },
         links: {
-          enable: false, // Links are disabled for this effect
+          color: "#74a9bc",
+          distance: 130,
+          enable: true,
+          opacity: 0.11,
+          width: 1,
         },
         move: {
           direction: "none",
@@ -50,7 +55,7 @@ const AnimatedBackground = () => {
             default: "out",
           },
           random: true,
-          speed: 2,
+          speed: 1.15,
           straight: false,
         },
         number: {
@@ -58,22 +63,19 @@ const AnimatedBackground = () => {
             enable: true,
             area: 800,
           },
-          value: 30,
+          value: 24,
         },
         opacity: {
-          value: 0.6,
+          value: 0.2,
         },
         shape: {
-          type: "polygon",
-          polygon: {
-            sides: 6,
-          },
+          type: "circle",
         },
         size: {
-          value: { min: 10, max: 40 },
+          value: { min: 2, max: 7 },
           animation: {
             enable: true,
-            speed: 5,
+            speed: 2,
             sync: false,
           },
         },

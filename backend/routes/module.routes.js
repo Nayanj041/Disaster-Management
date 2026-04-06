@@ -2,6 +2,7 @@ import express from "express";
 import {
   createModule,
   getModuleById,
+  getModuleRecommendations,
   getModules,
   submitModuleQuiz,
   updateModuleProgress,
@@ -12,6 +13,7 @@ import { isAdmin } from "../middleware/isAdmin.js";
 const router = express.Router();
 
 router.get("/", protectRoute, getModules);
+router.get("/recommendations", protectRoute, getModuleRecommendations);
 router.get("/:id", protectRoute, getModuleById);
 router.put("/:id/progress", protectRoute, updateModuleProgress);
 router.post("/:id/quiz", protectRoute, submitModuleQuiz);

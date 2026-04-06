@@ -21,7 +21,7 @@ import {
 const Sidebar = () => {
   const { user } = useAuth();
   const location = useLocation();
-  const [isOpen, setIsOpen] = useState(true);
+  const [isCompact, setIsCompact] = useState(false);
 
   const navigation = [
     {
@@ -104,56 +104,60 @@ const Sidebar = () => {
   );
 
   return (
-    <>
-      {/* Narrow hover zone to trigger sidebar open */}
-      <div
-        className="fixed top-0 left-0 h-screen w-4 z-50"
-        onMouseEnter={() => setIsOpen(true)}
-      />
-
-      {/* Sidebar container */}
-      <div
-        className="fixed left-0 top-0 h-screen w-64 z-40 transition-transform duration-300 ease-in-out"
-        onMouseLeave={() => setIsOpen(false)}>
-        {/* Toggle Button */}
+    <aside
+      className={`fixed left-0 top-16 z-40 hidden h-[calc(100vh-4rem)] border-r border-border/70 bg-card/88 backdrop-blur-lg transition-all duration-300 lg:block ${
+        isCompact ? "w-20" : "w-72"
+      }`}>
+      <div className="flex h-full flex-col">
         <button
-          onClick={() => setIsOpen(!isOpen)}
-          className={`fixed top-1/2 p-2 bg-primary-600 text-white rounded-r-lg shadow-lg focus:outline-none focus:ring-2 focus:ring-primary-500 focus:ring-offset-2 transition-transform duration-300 transform -translate-y-1/2 ${
-            isOpen ? "left-64" : "left-0"
-          } z-50`}>
-          {isOpen ? <ChevronLeft size={24} /> : <ChevronRight size={24} />}
+          onClick={() => setIsCompact(!isCompact)}
+          className="mx-3 mt-3 inline-flex h-9 items-center justify-center self-end rounded-lg border border-border/70 bg-secondary/40 px-2 text-muted-foreground transition hover:text-foreground"
+          aria-label="Toggle sidebar width">
+          {isCompact ? <ChevronRight size={18} /> : <ChevronLeft size={18} />}
         </button>
 
-        {/* Slidable Sidebar */}
-        <div
-          className={`h-full bg-white shadow-lg border-r border-gray-200 overflow-y-auto transform transition-transform duration-300 ease-in-out ${
-            isOpen ? "translate-x-0" : "-translate-x-full"
-          }`}>
-          <div className="p-4 pt-16">
-            <nav className="space-y-2">
-              {filteredNavigation.map((item) => {
-                const isActive = location.pathname === item.href;
-                const Icon = item.icon;
+        <div className="px-4 pb-2 pt-3">
+          <p
+            className={`text-xs uppercase tracking-[0.16em] text-muted-foreground transition-opacity ${
+              isCompact ? "opacity-0" : "opacity-100"
+            }`}>
+            Navigation
+          </p>
+        </div>
 
-                return (
-                  <Link
-                    key={item.name}
-                    to={item.href}
-                    className={`flex items-center space-x-3 px-4 py-3 rounded-lg transition-colors ${
-                      isActive
-                        ? "bg-primary-100 text-primary-700 border-r-2 border-primary-600"
-                        : "text-gray-700 hover:bg-gray-100"
-                    }`}>
-                    <Icon className="h-5 w-5" />
-                    <span className="font-medium">{item.name}</span>
-                  </Link>
-                );
-              })}
-            </nav>
-          </div>
+        <nav className="scrollbar-thin flex-1 space-y-1 overflow-y-auto px-3 pb-4">
+          {filteredNavigation.map((item) => {
+            const isActive = location.pathname === item.href;
+            const Icon = item.icon;
+
+            return (
+              <Link
+                key={item.name}
+                to={item.href}
+                className={`group flex items-center gap-3 rounded-xl px-3 py-2.5 text-sm font-medium transition-all ${
+                  isActive
+                    ? "bg-primary text-primary-foreground shadow-sm"
+                    : "text-muted-foreground hover:bg-secondary hover:text-foreground"
+                }`}>
+                <Icon className="h-4 w-4 shrink-0" />
+                {!isCompact && <span className="truncate">{item.name}</span>}
+              </Link>
+            );
+          })}
+        </nav>
+
+        <div className="mx-3 mb-4 rounded-xl border border-border/70 bg-secondary/35 p-3 text-xs text-muted-foreground">
+          {!isCompact ? (
+            <>
+              <p className="font-semibold text-foreground">Stay Prepared</p>
+              <p className="mt-1">Run a quick drill weekly and keep evacuation routes visible.</p>
+            </>
+          ) : (
+            <Shield className="mx-auto h-4 w-4 text-primary" />
+          )}
         </div>
       </div>
-    </>
+    </aside>
   );
 };
 

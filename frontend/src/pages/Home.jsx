@@ -11,69 +11,37 @@ import ShadcnFooter from "../components/ShadcnFooter";
 import Testimonials from "../components/Testimonials";
 
 const Home = () => {
-  const features = [
-    {
-      icon: BookOpen,
-      title: "Interactive Learning",
-      description:
-        "Comprehensive disaster preparedness modules tailored to your region",
-    },
-    {
-      icon: Target,
-      title: "Drill Simulations",
-      description:
-        "Practice emergency procedures with realistic drill scenarios",
-    },
-    {
-      icon: Award,
-      title: "Gamification",
-      description: "Earn badges, XP points, and compete on leaderboards",
-    },
-    {
-      icon: AlertTriangle,
-      title: "Real-time Alerts",
-      description: "Stay informed with emergency notifications and updates",
-    },
-    {
-      icon: Users,
-      title: "Community",
-      description: "Connect with students, teachers, and emergency responders",
-    },
-    {
-      icon: Shield,
-      title: "Safety First",
-      description: "Evidence-based content from disaster management experts",
-    },
-  ];
-
   return (
     <div className="min-h-screen flex flex-col">
       <section
-        className="relative w-full min-h-screen text-white bg-cover bg-center bg-no-repeat flex items-center justify-center"
+        className="relative flex min-h-screen w-full items-center justify-center overflow-hidden bg-cover bg-center bg-no-repeat text-white"
         style={{
           backgroundImage: "url('/diaster.gif')",
         }}>
-        <div className="absolute inset-0 bg-black/60"></div>
+        <div className="absolute inset-0" style={{ backgroundColor: "#0009" }}></div>
 
-        <div className="relative z-10 text-center px-4 sm:px-6 lg:px-8 max-w-4xl">
-          <h1 className="text-4xl md:text-6xl font-bold mb-6">
+        <div className="relative z-10 mx-auto max-w-5xl px-4 text-center sm:px-6 lg:px-8">
+          <div className="mb-5 inline-flex rounded-full border border-white/35 bg-white/10 px-4 py-1.5 text-xs font-semibold uppercase tracking-[0.16em] text-white/90 backdrop-blur">
+            Disaster Readiness Platform
+          </div>
+          <h1 className="mb-6 text-4xl font-bold md:text-6xl">
             Be Prepared, Stay Safe
           </h1>
-          <p className="text-xl md:text-2xl mb-8 text-primary-100">
+          <p className="mx-auto mb-8 max-w-3xl text-lg text-slate-100 md:text-2xl">
             Master disaster preparedness through interactive learning, realistic
             drills, and community engagement. Your safety education starts here.
           </p>
-          <div className="flex flex-col sm:flex-row gap-4 justify-center">
+          <div className="flex flex-col justify-center gap-4 sm:flex-row">
             <Link
               to="/login"
-              className="bg-white text-primary-600 px-8 py-4 rounded-lg font-semibold text-lg hover:bg-gray-100 transition-colors text-black">
+              className="inline-flex items-center justify-center rounded-xl bg-white px-8 py-4 text-lg font-semibold text-slate-900 shadow-lg transition hover:-translate-y-0.5 hover:bg-slate-100">
               Get Started
             </Link>
             <a
               href="https://ndma.gov.in/"
               target="_blank"
               rel="noopener noreferrer">
-              <button className="border-2 border-white text-white px-8 py-4 rounded-lg font-semibold text-lg hover:bg-white hover:text-black transition-colors">
+              <button className="inline-flex items-center justify-center rounded-xl border-2 border-white/80 bg-transparent px-8 py-4 text-lg font-semibold text-white transition hover:bg-white hover:text-slate-900">
                 Learn More
               </button>
             </a>
@@ -83,18 +51,18 @@ const Home = () => {
 
       <Testimonials />
 
-      <section className="py-20 bg-gray-100 px-4">
-        <div className="max-w-4xl mx-auto text-center">
-          <h2 className="text-3xl md:text-4xl font-bold text-gray-900 mb-6">
+      <section className="px-4 py-20">
+        <div className="mx-auto max-w-4xl rounded-3xl border border-border/70 bg-card/80 px-6 py-12 text-center shadow-lg backdrop-blur md:px-10">
+          <h2 className="mb-6 text-3xl font-bold text-foreground md:text-4xl">
             Ready to Start Your Safety Journey?
           </h2>
-          <p className="text-xl text-gray-600 mb-8">
+          <p className="mb-8 text-xl text-muted-foreground">
             Join thousands of students, teachers, and communities building
             resilience through education and preparation.
           </p>
           <Link
             to="/login"
-            className="btn-primary text-lg px-8 py-4 inline-block">
+            className="btn-primary inline-block px-8 py-4 text-lg">
             Join Now – It's Free
           </Link>
         </div>

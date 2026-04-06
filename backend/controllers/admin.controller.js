@@ -4,6 +4,7 @@ import Drill from "../models/drill.model.js";
 import UserProgress from "../models/user.progress.js";
 import Progress from "../models/progress.model.js";
 import Report from "../models/report.model.js";
+import RiskAssessment from "../models/riskAssessment.model.js";
 
 const toDayString = (date) => new Date(date).toISOString().slice(0, 10);
 
@@ -254,5 +255,154 @@ export const generateAnalyticsReport = async (req, res) => {
   } catch (error) {
     console.error("Error generating analytics report:", error);
     res.status(500).json({ message: "Failed to generate analytics report" });
+  }
+};
+
+export const getPreparednessIndex = async (req, res) => {
+  try {
+    const sinceDays = Math.min(180, Math.max(7, Number(req.query.days) || 90));
+    const since = new Date();
+    since.setDate(since.getDate() - sinceDays);
+
+    const [userRows, progressRows, moduleRows, drillRows, riskRows] = await Promise.all([
+      User.find().select("_id region role"),
+      Progress.find().select("userId completedModules drillsCompleted"),
+      UserProgress.find({ updatedAt: { $gte: since } }).select("userId status score updatedAt"),
+      Drill.find({ updatedAt: { $gte: since } }).select("region status score updatedAt"),
+      RiskAssessment.find({ createdAt: { $gte: since } }).select("location.region overallRisk createdAt"),
+    ]);
+
+    const userRegionMap = new Map();
+    const regionStats = new Map();
+
+    const ensureRegion = (region) => {
+      const key = String(region || "Unknown");
+      if (!regionStats.has(key)) {
+        regionStats.set(key, {
+          region: key,
+          users: 0,
+          trainingUsers: new Set(),
+          moduleCompletions: 0,
+          drillEvents: 0,
+          drillCompleted: 0,
+          drillScoreTotal: 0,
+          drillScoreCount: 0,
+          riskTotal: 0,
+          riskCount: 0,
+        });
+      }
+      return regionStats.get(key);
+    };
+
+    for (const u of userRows) {
+      const region = u.region || "Unknown";
+      userRegionMap.set(String(u._id), region);
+      const bucket = ensureRegion(region);
+      bucket.users += 1;
+    }
+
+    for (const row of progressRows) {
+      const userId = String(row.userId);
+      const region = userRegionMap.get(userId);
+      if (!region) continue;
+      const bucket = ensureRegion(region);
+      const completedModules = Number(row.completedModules || 0);
+      const completedDrills = Number(row.drillsCompleted || 0);
+      if (completedModules > 0 || completedDrills > 0) {
+        bucket.trainingUsers.add(userId);
+      }
+      bucket.moduleCompletions += completedModules;
+      bucket.drillCompleted += completedDrills;
+    }
+
+    for (const row of moduleRows) {
+      if (row.status !== "complete") continue;
+      const region = userRegionMap.get(String(row.userId));
+      if (!region) continue;
+      const bucket = ensureRegion(region);
+      bucket.moduleCompletions += 1;
+      bucket.trainingUsers.add(String(row.userId));
+    }
+
+    for (const drill of drillRows) {
+      const bucket = ensureRegion(drill.region || "Unknown");
+      bucket.drillEvents += 1;
+      if (drill.status === "completed") {
+        bucket.drillCompleted += 1;
+      }
+      if (Number.isFinite(drill.score)) {
+        bucket.drillScoreTotal += Number(drill.score || 0);
+        bucket.drillScoreCount += 1;
+      }
+    }
+
+    for (const risk of riskRows) {
+      const bucket = ensureRegion(risk?.location?.region || "Unknown");
+      bucket.riskTotal += Number(risk.overallRisk || 0);
+      bucket.riskCount += 1;
+    }
+
+    const rows = Array.from(regionStats.values()).map((bucket) => {
+      const users = Math.max(1, bucket.users);
+      const trainingCompletionRate = Math.min(
+        100,
+        Math.round((bucket.trainingUsers.size / users) * 100)
+      );
+      const drillEffectivenessScore = bucket.drillScoreCount
+        ? Math.round(bucket.drillScoreTotal / bucket.drillScoreCount)
+        : bucket.drillEvents
+          ? Math.round((bucket.drillCompleted / Math.max(1, bucket.drillEvents)) * 100)
+          : 0;
+      const incidentResponseScore = Math.min(
+        100,
+        Math.round(
+          (Math.min(bucket.moduleCompletions / users, 1) * 55) +
+            (Math.min(bucket.drillCompleted / users, 1) * 45)
+        )
+      );
+      const riskExposureWeight = bucket.riskCount
+        ? Math.round(bucket.riskTotal / bucket.riskCount)
+        : 50;
+
+      const preparednessIndex = Math.max(
+        0,
+        Math.min(
+          100,
+          Math.round(
+            trainingCompletionRate * 0.35 +
+              drillEffectivenessScore * 0.30 +
+              incidentResponseScore * 0.20 +
+              (100 - riskExposureWeight) * 0.15
+          )
+        )
+      );
+
+      return {
+        region: bucket.region,
+        users: bucket.users,
+        trainingCompletionRate,
+        drillEffectivenessScore,
+        incidentResponseScore,
+        riskExposureWeight,
+        preparednessIndex,
+      };
+    });
+
+    rows.sort((a, b) => b.preparednessIndex - a.preparednessIndex);
+
+    const statePreparednessIndex = rows.length
+      ? Math.round(rows.reduce((sum, r) => sum + r.preparednessIndex, 0) / rows.length)
+      : 0;
+
+    res.json({
+      sinceDays,
+      statePreparednessIndex,
+      topRegions: rows.slice(0, 5),
+      vulnerableRegions: [...rows].sort((a, b) => a.preparednessIndex - b.preparednessIndex).slice(0, 5),
+      regions: rows,
+    });
+  } catch (error) {
+    console.error("Error fetching preparedness index:", error);
+    res.status(500).json({ message: "Failed to fetch preparedness index" });
   }
 };

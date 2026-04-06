@@ -15,7 +15,10 @@ import {
   Filter,
   Bell,
   Users,
+  LocateFixed,
+  Brain,
 } from "lucide-react";
+import { getOfflineData, saveOfflineData } from "../lib/offlineStore";
 
 const Alerts = () => {
   const [activeTab, setActiveTab] = useState("alerts");
@@ -24,27 +27,42 @@ const Alerts = () => {
   const [searchTerm, setSearchTerm] = useState("");
   const [alerts, setAlerts] = useState([]);
   const [contacts, setContacts] = useState([]);
+  const [geoFilter, setGeoFilter] = useState({ latitude: "", longitude: "", radiusKm: 75 });
+  const [predictionInput, setPredictionInput] = useState({
+    windSpeed: 18,
+    rainfall: 30,
+    temperature: 36,
+    waterLevel: 22,
+    historicalIncidents: 3,
+  });
+  const [severityPrediction, setSeverityPrediction] = useState(null);
+
+  const fetchAlerts = async (params = {}) => {
+    try {
+      const res = await axiosInstance.get("/alerts", { params });
+      const mapped = res.data.map((alert) => ({
+        id: alert._id,
+        title: alert.type || "Untitled Alert",
+        description: alert.message || "No description provided",
+        severity: alert.severity?.toLowerCase() || "low",
+        region: alert.region || "Unknown",
+        source: alert.source || "Unknown",
+        timestamp: alert.timestamp || new Date().toISOString(),
+        status: alert.status || "Active",
+        distanceKm: alert.distanceKm,
+      }));
+      setAlerts(mapped);
+      await saveOfflineData("alerts:latest", mapped);
+    } catch (err) {
+      console.error("❌ Failed to fetch alerts:", err.message);
+      const cached = await getOfflineData("alerts:latest");
+      if (Array.isArray(cached?.value)) {
+        setAlerts(cached.value);
+      }
+    }
+  };
 
   useEffect(() => {
-    const fetchAlerts = async () => {
-      try {
-        const res = await axiosInstance.get("/alerts");
-        const mapped = res.data.map((alert) => ({
-          id: alert._id,
-          title: alert.type || "Untitled Alert",
-          description: alert.message || "No description provided",
-          severity: alert.severity?.toLowerCase() || "low",
-          region: alert.region || "Unknown",
-          source: alert.source || "Unknown",
-          timestamp: alert.timestamp || new Date().toISOString(),
-          status: alert.status || "Active",
-        }));
-        setAlerts(mapped);
-      } catch (err) {
-        console.error("❌ Failed to fetch alerts:", err.message);
-      }
-    };
-
     fetchAlerts();
   }, []);
 
@@ -74,6 +92,44 @@ const Alerts = () => {
 
   const handleDismissAlert = (alertId) => {
     setAlerts(alerts.filter((alert) => alert.id !== alertId));
+  };
+
+  const applyGeoFilter = () => {
+    const lat = Number(geoFilter.latitude);
+    const lng = Number(geoFilter.longitude);
+    const radius = Number(geoFilter.radiusKm || 75);
+    if (!Number.isFinite(lat) || !Number.isFinite(lng)) {
+      fetchAlerts();
+      return;
+    }
+    fetchAlerts({ latitude: lat, longitude: lng, radiusKm: radius });
+  };
+
+  const detectMyLocation = () => {
+    if (!navigator.geolocation) return;
+    navigator.geolocation.getCurrentPosition((position) => {
+      const { latitude, longitude } = position.coords;
+      const updated = {
+        latitude: latitude.toFixed(6),
+        longitude: longitude.toFixed(6),
+        radiusKm: geoFilter.radiusKm,
+      };
+      setGeoFilter(updated);
+      fetchAlerts({
+        latitude,
+        longitude,
+        radiusKm: Number(geoFilter.radiusKm || 75),
+      });
+    });
+  };
+
+  const predictSeverity = async () => {
+    try {
+      const { data } = await axiosInstance.post("/alerts/predict-severity", predictionInput);
+      setSeverityPrediction(data);
+    } catch (error) {
+      console.error("Failed to predict severity", error);
+    }
   };
 
   const filteredAlerts = alerts.filter((alert) => {
@@ -253,6 +309,92 @@ const Alerts = () => {
                   )
                 )}
               </select>
+            </div>
+          </div>
+        </div>
+
+        <div className="grid grid-cols-1 gap-6 lg:grid-cols-2 mb-6">
+          <div className="bg-white rounded-lg p-4 shadow-sm border">
+            <div className="flex items-center justify-between mb-3">
+              <h3 className="text-sm font-semibold text-gray-900">Geo-fenced Alerts</h3>
+              <button
+                onClick={detectMyLocation}
+                className="inline-flex items-center gap-1 rounded-md bg-blue-50 px-2.5 py-1 text-xs font-medium text-blue-700 hover:bg-blue-100"
+              >
+                <LocateFixed className="h-3.5 w-3.5" />
+                Use my location
+              </button>
+            </div>
+            <div className="grid grid-cols-1 gap-2 md:grid-cols-3">
+              <input
+                type="number"
+                placeholder="Latitude"
+                value={geoFilter.latitude}
+                onChange={(e) => setGeoFilter((prev) => ({ ...prev, latitude: e.target.value }))}
+                className="rounded-md border border-gray-300 px-3 py-2 text-sm"
+              />
+              <input
+                type="number"
+                placeholder="Longitude"
+                value={geoFilter.longitude}
+                onChange={(e) => setGeoFilter((prev) => ({ ...prev, longitude: e.target.value }))}
+                className="rounded-md border border-gray-300 px-3 py-2 text-sm"
+              />
+              <div className="flex gap-2">
+                <input
+                  type="number"
+                  placeholder="Radius (km)"
+                  value={geoFilter.radiusKm}
+                  onChange={(e) => setGeoFilter((prev) => ({ ...prev, radiusKm: e.target.value }))}
+                  className="w-full rounded-md border border-gray-300 px-3 py-2 text-sm"
+                />
+                <button
+                  onClick={applyGeoFilter}
+                  className="rounded-md bg-blue-600 px-3 py-2 text-sm font-medium text-white hover:bg-blue-700"
+                >
+                  Apply
+                </button>
+              </div>
+            </div>
+          </div>
+
+          <div className="bg-white rounded-lg p-4 shadow-sm border">
+            <div className="flex items-center gap-2 mb-3">
+              <Brain className="h-4 w-4 text-purple-600" />
+              <h3 className="text-sm font-semibold text-gray-900">AI Severity Predictor</h3>
+            </div>
+            <div className="grid grid-cols-2 gap-2">
+              {Object.keys(predictionInput).map((key) => (
+                <input
+                  key={key}
+                  type="number"
+                  value={predictionInput[key]}
+                  onChange={(e) =>
+                    setPredictionInput((prev) => ({
+                      ...prev,
+                      [key]: Number(e.target.value),
+                    }))
+                  }
+                  className="rounded-md border border-gray-300 px-3 py-2 text-sm"
+                  placeholder={key}
+                />
+              ))}
+            </div>
+            <div className="mt-3 flex items-center justify-between">
+              <button
+                onClick={predictSeverity}
+                className="rounded-md bg-purple-600 px-3 py-2 text-sm font-medium text-white hover:bg-purple-700"
+              >
+                Predict
+              </button>
+              {severityPrediction && (
+                <div className="text-right">
+                  <p className="text-xs text-gray-500">Risk Score: {severityPrediction.riskScore}</p>
+                  <p className="text-sm font-semibold capitalize text-gray-900">
+                    {severityPrediction.predictedSeverity}
+                  </p>
+                </div>
+              )}
             </div>
           </div>
         </div>

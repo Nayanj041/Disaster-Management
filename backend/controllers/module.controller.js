@@ -277,3 +277,74 @@ export const submitModuleQuiz = async (req, res) => {
     res.status(500).json({ message: "Failed to submit quiz" });
   }
 };
+
+export const getModuleRecommendations = async (req, res) => {
+  try {
+    await ensureSeedModules();
+
+    const [modules, progressRows, gamification, user] = await Promise.all([
+      Module.find({ isPublished: true }).sort({ createdAt: -1 }),
+      UserProgress.find({ userId: req.user._id }).select("moduleId status score"),
+      Progress.findOne({ userId: req.user._id }).select("level completedModules"),
+      User.findById(req.user._id).select("region"),
+    ]);
+
+    const completedMap = new Map(
+      progressRows
+        .filter((row) => row.status === "complete")
+        .map((row) => [String(row.moduleId), Number(row.score || 0)])
+    );
+
+    const completedScores = Array.from(completedMap.values());
+    const avgScore = completedScores.length
+      ? completedScores.reduce((sum, score) => sum + score, 0) / completedScores.length
+      : 0;
+
+    let targetDifficulty = "beginner";
+    if ((gamification?.level || 1) >= 3 || avgScore >= 80) {
+      targetDifficulty = "intermediate";
+    }
+    if ((gamification?.level || 1) >= 5 || avgScore >= 90) {
+      targetDifficulty = "advanced";
+    }
+
+    const difficultyRank = { beginner: 1, intermediate: 2, advanced: 3 };
+    const targetRank = difficultyRank[targetDifficulty];
+    const userRegion = user?.region || "India";
+
+    const recommendations = modules
+      .filter((moduleDoc) => !completedMap.has(String(moduleDoc._id)))
+      .map((moduleDoc) => {
+        const difficulty = String(moduleDoc.difficulty || "beginner");
+        const difficultyGap = Math.abs((difficultyRank[difficulty] || 1) - targetRank);
+        const regionMatch =
+          Array.isArray(moduleDoc.regions) &&
+          (moduleDoc.regions.includes(userRegion) || moduleDoc.regions.includes("All"));
+
+        const recommendationScore =
+          (regionMatch ? 55 : 25) +
+          Math.max(0, 30 - difficultyGap * 12) +
+          Math.min(15, Number(moduleDoc.rating || 0) * 3);
+
+        return {
+          ...moduleDoc.toObject(),
+          recommendationScore: Math.round(recommendationScore),
+          recommendationReason: regionMatch
+            ? `Matches your region (${userRegion}) and current skill profile`
+            : "Recommended to expand multi-hazard preparedness",
+        };
+      })
+      .sort((a, b) => b.recommendationScore - a.recommendationScore)
+      .slice(0, 6);
+
+    res.json({
+      targetDifficulty,
+      avgScore: Math.round(avgScore),
+      completedModules: completedMap.size,
+      recommendations,
+    });
+  } catch (error) {
+    console.error("Error fetching module recommendations:", error);
+    res.status(500).json({ message: "Failed to fetch module recommendations" });
+  }
+};

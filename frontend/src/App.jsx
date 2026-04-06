@@ -62,18 +62,22 @@ const ProtectedRoute = ({ children, adminOnly = false, allowedRoles = [] }) => {
 };
 
 const Layout = ({ children }) => (
-  <div className="min-h-screen bg-background/80 backdrop-blur-sm">
+  <div className="min-h-screen bg-transparent">
     <Navbar />
     <div className="flex">
       <Sidebar />
-      <main className="flex-1">{children}</main>
+      <main className="w-full px-4 pb-6 pt-5 md:px-6 lg:pl-[18.5rem] lg:pr-8 lg:pt-8">
+        <div className="surface-panel min-h-[calc(100vh-11rem)] p-4 md:p-6 lg:p-8">
+          {children}
+        </div>
+      </main>
     </div>
     <Footer />
   </div>
 );
 
 const AuthLayout = ({ children }) => (
-  <div className="min-h-screen bg-background/80 backdrop-blur-sm">
+  <div className="min-h-screen bg-transparent">
     {children}
   </div>
 );
@@ -88,8 +92,11 @@ function App() {
 
   if (isCheckingAuth) {
     return (
-      <div className="flex justify-center items-center h-screen">
-        Loading...
+      <div className="flex h-screen items-center justify-center">
+        <div className="surface-panel flex items-center gap-3 px-6 py-4 text-sm font-semibold text-muted-foreground">
+          <span className="h-2.5 w-2.5 animate-ping rounded-full bg-primary" />
+          Preparing your disaster dashboard...
+        </div>
       </div>
     );
   }

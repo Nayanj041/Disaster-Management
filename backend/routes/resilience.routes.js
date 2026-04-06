@@ -19,6 +19,7 @@ import {
   createVolunteerTask,
   updateVolunteerTask,
   getOfflinePack,
+  triggerSos,
 } from "../controllers/resilience.controller.js";
 
 const router = express.Router();
@@ -67,5 +68,6 @@ router.patch(
 );
 
 router.get("/offline-pack", protectRoute, getOfflinePack);
+router.post("/sos", protectRoute, triggerSos);
 
 export default router;

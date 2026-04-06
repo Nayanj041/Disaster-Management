@@ -32,8 +32,8 @@ const RegionReportChart = () => {
   };
 
   return (
-    <div className="bg-white p-6 rounded-xl shadow-md">
-      <h3 className="text-xl font-semibold mb-4 text-gray-800">
+    <div className="card border-border/70 p-6">
+      <h3 className="mb-4 text-xl font-semibold text-foreground">
         Reports by Region
       </h3>
       <Bar data={data} options={options} />

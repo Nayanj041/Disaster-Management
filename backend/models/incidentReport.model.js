@@ -74,6 +74,15 @@ const incidentReportSchema = new mongoose.Schema(
       },
       responseSlaMinutes: { type: Number, default: 60, min: 5 },
       tags: [{ type: String, trim: true }],
+      fallbackNotification: {
+        smsAttempted: { type: Boolean, default: false },
+        smsStatus: {
+          type: String,
+          enum: ["not_attempted", "queued", "sent", "failed"],
+          default: "not_attempted",
+        },
+        smsReference: { type: String, default: "" },
+      },
     },
     timeline: [
       {

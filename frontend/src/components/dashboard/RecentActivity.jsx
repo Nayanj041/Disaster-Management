@@ -24,8 +24,8 @@ const RecentActivity = ({ activities = [] }) => {
   const displayActivities = activities
 
   return (
-    <div className="bg-card rounded-lg shadow-md border border-gray-200 p-6">
-      <h3 className="text-lg font-semibold text-gray-900 mb-4">Recent Activity</h3>
+    <div className="card border-border/70 p-6">
+      <h3 className="mb-4 text-lg font-semibold text-foreground">Recent Activity</h3>
       <div className="space-y-4">
         {displayActivities.length > 0 ? displayActivities.map((activity) => {
           const Icon = getActivityIcon(activity.type)
@@ -37,24 +37,22 @@ const RecentActivity = ({ activities = [] }) => {
                 <Icon className="h-4 w-4" />
               </div>
               <div className="flex-1 min-w-0">
-                <p className="text-sm font-medium text-gray-900">{activity.title}</p>
+                <p className="text-sm font-medium text-foreground">{activity.title}</p>
                 <div className="flex items-center justify-between mt-1">
-                  <p className="text-xs text-gray-500">
+                  <p className="text-xs text-muted-foreground">
                     {new Date(activity.timestamp).toLocaleDateString()} at{" "}
                     {new Date(activity.timestamp).toLocaleTimeString([], { hour: "2-digit", minute: "2-digit" })}
                   </p>
-                  {activity.points && (
-                    <span className="text-xs font-medium text-primary-600">+{activity.points} XP</span>
-                  )}
+                  {activity.points && <span className="text-xs font-medium text-primary">+{activity.points} XP</span>}
                 </div>
               </div>
             </div>
           )
         }) : (
-          <p className="text-sm text-gray-500">No recent activity yet.</p>
+          <p className="text-sm text-muted-foreground">No recent activity yet.</p>
         )}
       </div>
-      <button className="w-full mt-4 text-sm text-primary-600 hover:text-primary-700 font-medium">
+      <button className="mt-4 w-full text-sm font-medium text-primary transition hover:text-primary/80">
         View All Activity
       </button>
     </div>

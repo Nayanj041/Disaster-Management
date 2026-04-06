@@ -15,6 +15,22 @@ const REGION_HAZARD_BASE = {
   India: { earthquake: 55, flood: 60, cyclone: 58, fire: 40 },
 };
 
+const REGION_COORDS = {
+  Punjab: { latitude: 31.1471, longitude: 75.3412 },
+  Amritsar: { latitude: 31.634, longitude: 74.8723 },
+  Ludhiana: { latitude: 30.901, longitude: 75.8573 },
+  Jalandhar: { latitude: 31.326, longitude: 75.5762 },
+  Patiala: { latitude: 30.3398, longitude: 76.3869 },
+  Mohali: { latitude: 30.7046, longitude: 76.7179 },
+  Bathinda: { latitude: 30.211, longitude: 74.9455 },
+  North: { latitude: 31.2, longitude: 77.1 },
+  South: { latitude: 10.8, longitude: 78.6 },
+  East: { latitude: 22.5, longitude: 88.4 },
+  West: { latitude: 19.1, longitude: 72.9 },
+  Central: { latitude: 23.2, longitude: 79.9 },
+  India: { latitude: 22.9734, longitude: 78.6569 },
+};
+
 const clamp = (n, min, max) => Math.max(min, Math.min(max, n));
 
 const computeScores = ({ region, infrastructure }) => {
@@ -207,5 +223,58 @@ export const getDrillParticipationAnalytics = async (_req, res) => {
   } catch (error) {
     console.error("Error fetching drill participation analytics:", error);
     res.status(500).json({ message: "Failed to fetch drill analytics" });
+  }
+};
+
+export const getGeoRiskZones = async (_req, res) => {
+  try {
+    const regionRisk = await RiskAssessment.aggregate([
+      {
+        $group: {
+          _id: "$location.region",
+          averageRisk: { $avg: "$overallRisk" },
+          preparednessScore: { $avg: "$preparednessScore" },
+          sampleSize: { $sum: 1 },
+        },
+      },
+      {
+        $project: {
+          _id: 0,
+          region: "$_id",
+          averageRisk: { $round: ["$averageRisk", 0] },
+          preparednessScore: { $round: ["$preparednessScore", 0] },
+          sampleSize: 1,
+        },
+      },
+    ]);
+
+    const riskMap = new Map(regionRisk.map((r) => [String(r.region), r]));
+    const allRegions = new Set([...Object.keys(REGION_COORDS), ...riskMap.keys()]);
+
+    const zones = Array.from(allRegions).map((region) => {
+      const risk = riskMap.get(region);
+      const averageRisk = Number(risk?.averageRisk ?? REGION_HAZARD_BASE[region]?.flood ?? 50);
+      const preparednessScore = Number(risk?.preparednessScore ?? Math.max(20, 100 - averageRisk));
+
+      let band = "low";
+      if (averageRisk >= 75) band = "critical";
+      else if (averageRisk >= 60) band = "high";
+      else if (averageRisk >= 40) band = "moderate";
+
+      return {
+        region,
+        coordinates: REGION_COORDS[region] || REGION_COORDS.India,
+        averageRisk,
+        preparednessScore,
+        riskBand: band,
+        sampleSize: Number(risk?.sampleSize || 0),
+      };
+    });
+
+    zones.sort((a, b) => b.averageRisk - a.averageRisk);
+    res.json(zones);
+  } catch (error) {
+    console.error("Error fetching geo risk zones:", error);
+    res.status(500).json({ message: "Failed to fetch geo risk zones" });
   }
 };

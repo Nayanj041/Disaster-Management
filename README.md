@@ -12,6 +12,10 @@ The system combines training, risk intelligence, incident reporting, and respons
 - volunteer task coordination and operational tracking
 - real-time style alert preferences and offline emergency packs
 
+## SIH Blueprint
+
+- Advanced SIH25008 professional solution design: [SIH25008_SURAKSHAAI_BLUEPRINT.md](SIH25008_SURAKSHAAI_BLUEPRINT.md)
+
 ## Live URLs
 
 - Frontend: https://sih2025-1-pjfk.onrender.com

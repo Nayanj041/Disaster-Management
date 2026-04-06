@@ -84,9 +84,9 @@ const TeacherDashboard = () => {
   return (
     <div className="space-y-6">
       {/* Welcome Section */}
-      <div className="bg-gradient-to-r from-green-600 to-green-700 rounded-lg shadow-md p-6 text-white">
-        <h1 className="text-2xl font-bold mb-2">Good morning, {user?.name}!</h1>
-        <p className="text-green-100">
+      <div className="rounded-2xl bg-gradient-to-r from-emerald-600 to-teal-700 p-6 text-white shadow-lg">
+        <h1 className="mb-2 text-2xl font-bold">Good morning, {user?.name}!</h1>
+        <p className="text-emerald-50/90">
           You have 28 students enrolled and 3 pending alerts that need your
           attention.
         </p>
@@ -103,38 +103,38 @@ const TeacherDashboard = () => {
       <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
         {/* Student Progress */}
         <div className="lg:col-span-2 space-y-6">
-          <div className="bg-card rounded-lg shadow-md border border-gray-200 p-6">
-            <h2 className="text-xl font-semibold text-gray-900 mb-4">
+          <div className="card border-border/70 p-6">
+            <h2 className="mb-4 text-xl font-semibold text-foreground">
               Student Progress Overview
             </h2>
             <div className="space-y-4">
               {studentProgress.map((student, index) => (
                 <div
                   key={index}
-                  className="flex items-center justify-between p-4 bg-gray-50 rounded-lg">
+                  className="flex items-center justify-between rounded-xl border border-border/70 bg-secondary/35 p-4">
                   <div className="flex items-center space-x-3">
                     <img
                       src="/diverse-user-avatars.png"
                       alt={student.name}
-                      className="h-10 w-10 rounded-full"
+                      className="h-10 w-10 rounded-full ring-1 ring-border"
                     />
                     <div>
-                      <p className="font-medium text-gray-900">
+                      <p className="font-medium text-foreground">
                         {student.name}
                       </p>
-                      <p className="text-sm text-gray-500">
+                      <p className="text-sm text-muted-foreground">
                         {student.modules} modules completed
                       </p>
                     </div>
                   </div>
                   <div className="flex items-center space-x-4">
                     <div className="text-right">
-                      <p className="text-sm font-medium text-gray-900">
+                      <p className="text-sm font-medium text-foreground">
                         {student.progress}%
                       </p>
-                      <div className="w-20 bg-gray-200 rounded-full h-2 mt-1">
+                      <div className="mt-1 h-2 w-20 rounded-full bg-secondary">
                         <div
-                          className="bg-primary-600 h-2 rounded-full"
+                          className="h-2 rounded-full bg-primary"
                           style={{ width: `${student.progress}%` }}></div>
                       </div>
                     </div>
@@ -148,24 +148,24 @@ const TeacherDashboard = () => {
                 </div>
               ))}
             </div>
-            <button className="w-full mt-4 text-sm text-primary-600 hover:text-primary-700 font-medium">
+            <button className="mt-4 w-full text-sm font-medium text-primary transition hover:text-primary/80">
               View All Students
             </button>
           </div>
 
           {/* Upcoming Drills */}
-          <div className="bg-card rounded-lg shadow-md border border-gray-200 p-6">
-            <h2 className="text-xl font-semibold text-gray-900 mb-4">
+          <div className="card border-border/70 p-6">
+            <h2 className="mb-4 text-xl font-semibold text-foreground">
               Upcoming Drills
             </h2>
             <div className="space-y-4">
               {upcomingDrills.map((drill, index) => (
                 <div
                   key={index}
-                  className="flex items-center justify-between p-4 border border-gray-200 rounded-lg">
+                  className="flex items-center justify-between rounded-xl border border-border/70 p-4">
                   <div>
-                    <h3 className="font-medium text-gray-900">{drill.title}</h3>
-                    <p className="text-sm text-gray-500">
+                    <h3 className="font-medium text-foreground">{drill.title}</h3>
+                    <p className="text-sm text-muted-foreground">
                       {drill.date.toLocaleDateString()} at{" "}
                       {drill.date.toLocaleTimeString([], {
                         hour: "2-digit",
@@ -174,10 +174,10 @@ const TeacherDashboard = () => {
                     </p>
                   </div>
                   <div className="text-right">
-                    <p className="text-sm font-medium text-gray-900">
+                    <p className="text-sm font-medium text-foreground">
                       {drill.participants} participants
                     </p>
-                    <span className="text-xs text-gray-500 capitalize">
+                    <span className="text-xs capitalize text-muted-foreground">
                       {drill.type}
                     </span>
                   </div>

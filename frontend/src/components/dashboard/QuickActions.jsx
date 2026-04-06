@@ -34,21 +34,21 @@ const QuickActions = ({ userRole }) => {
   const actions = getActionsForRole(userRole)
 
   return (
-    <div className="bg-card rounded-lg shadow-md border border-gray-200 p-6">
-      <h3 className="text-lg font-semibold text-gray-900 mb-4">Quick Actions</h3>
+    <div className="card border-border/70 p-6">
+      <h3 className="mb-4 text-lg font-semibold text-foreground">Quick Actions</h3>
       <div className="grid grid-cols-2 md:grid-cols-3 gap-3">
         {actions.map((action) => {
           const Icon = action.icon
           return (
             <button
               key={action.label}
-              className="flex flex-col items-center p-4 rounded-lg border border-gray-200 hover:bg-gray-50 transition-colors"
+              className="flex flex-col items-center rounded-xl border border-border/70 bg-card p-4 transition-all duration-200 hover:-translate-y-0.5 hover:bg-secondary/70"
               onClick={() => navigate(action.href)}
             >
               <div className={`p-3 rounded-full ${action.color} mb-2`}>
                 <Icon className="h-5 w-5 text-white" />
               </div>
-              <span className="text-sm font-medium text-gray-700 text-center">{action.label}</span>
+              <span className="text-center text-sm font-medium text-foreground">{action.label}</span>
             </button>
           )
         })}

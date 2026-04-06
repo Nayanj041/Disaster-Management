@@ -5,6 +5,33 @@ import ResourceCenter from "../models/resourceCenter.model.js";
 import VolunteerTask from "../models/volunteerTask.model.js";
 import Drill from "../models/drill.model.js";
 import RiskAssessment from "../models/riskAssessment.model.js";
+import { sendSms } from "../lib/smsProvider.js";
+
+const REGION_COORDINATES = {
+  Punjab: { latitude: 31.1471, longitude: 75.3412 },
+  Amritsar: { latitude: 31.634, longitude: 74.8723 },
+  Ludhiana: { latitude: 30.901, longitude: 75.8573 },
+  Jalandhar: { latitude: 31.326, longitude: 75.5762 },
+  Patiala: { latitude: 30.3398, longitude: 76.3869 },
+  Mohali: { latitude: 30.7046, longitude: 76.7179 },
+  Bathinda: { latitude: 30.211, longitude: 74.9455 },
+};
+
+const toRad = (v) => (v * Math.PI) / 180;
+const getDistanceKm = (lat1, lon1, lat2, lon2) => {
+  const R = 6371;
+  const dLat = toRad(lat2 - lat1);
+  const dLon = toRad(lon2 - lon1);
+  const a =
+    Math.sin(dLat / 2) * Math.sin(dLat / 2) +
+    Math.cos(toRad(lat1)) * Math.cos(toRad(lat2)) * Math.sin(dLon / 2) * Math.sin(dLon / 2);
+  return R * (2 * Math.atan2(Math.sqrt(a), Math.sqrt(1 - a)));
+};
+
+const sendSmsFallback = async ({ phone, message, incidentId }) => {
+  const reference = `sms-${String(incidentId)}-${Date.now()}`;
+  return sendSms({ to: phone, message, reference });
+};
 
 const DEFAULT_CHECKLIST = [
   { key: "water_kit", label: "Store 72-hour water supply", category: "supplies" },
@@ -414,6 +441,9 @@ export const listResources = async (req, res) => {
     const query = { isActive: true };
     if (req.query.region) query.region = req.query.region;
     if (req.query.type) query.type = req.query.type;
+    const latitude = Number(req.query.latitude);
+    const longitude = Number(req.query.longitude);
+    const hasGeo = Number.isFinite(latitude) && Number.isFinite(longitude);
 
     let resources = await ResourceCenter.find(query)
       .sort({ updatedAt: -1 })
@@ -427,6 +457,7 @@ export const listResources = async (req, res) => {
           region: req.query.region || "Odisha",
           city: "Bhubaneswar",
           address: "Sector 7 Community Hall",
+          coordinates: REGION_COORDINATES[req.query.region || "Punjab"] || REGION_COORDINATES.Punjab,
           capacity: 350,
           currentOccupancy: 120,
           contact: "+91-9000000001",
@@ -437,6 +468,7 @@ export const listResources = async (req, res) => {
           region: req.query.region || "Odisha",
           city: "Bhubaneswar",
           address: "Civil Lines",
+          coordinates: REGION_COORDINATES[req.query.region || "Punjab"] || REGION_COORDINATES.Punjab,
           capacity: 120,
           currentOccupancy: 65,
           contact: "+91-9000000002",
@@ -447,6 +479,7 @@ export const listResources = async (req, res) => {
           region: req.query.region || "Odisha",
           city: "Bhubaneswar",
           address: "Ring Road Junction",
+          coordinates: REGION_COORDINATES[req.query.region || "Punjab"] || REGION_COORDINATES.Punjab,
           capacity: 20,
           currentOccupancy: 8,
           contact: "108",
@@ -454,10 +487,139 @@ export const listResources = async (req, res) => {
       ]);
     }
 
+    if (hasGeo) {
+      resources = resources
+        .map((r) => {
+          const lat = Number(r.coordinates?.latitude);
+          const lng = Number(r.coordinates?.longitude);
+          if (!Number.isFinite(lat) || !Number.isFinite(lng)) {
+            return { ...r.toObject(), distanceKm: null };
+          }
+          return {
+            ...r.toObject(),
+            distanceKm: Number(getDistanceKm(latitude, longitude, lat, lng).toFixed(1)),
+          };
+        })
+        .sort((a, b) => {
+          if (!Number.isFinite(a.distanceKm)) return 1;
+          if (!Number.isFinite(b.distanceKm)) return -1;
+          return a.distanceKm - b.distanceKm;
+        });
+    }
+
     res.json(resources);
   } catch (error) {
     console.error("Error fetching resources:", error);
     res.status(500).json({ message: "Failed to fetch resources" });
+  }
+};
+
+export const triggerSos = async (req, res) => {
+  try {
+    const {
+      region,
+      city = "",
+      latitude,
+      longitude,
+      incidentType = "other",
+      description = "SOS triggered by user",
+      peopleAffected = 1,
+      injuriesReported = 0,
+    } = req.body || {};
+
+    if (!region) {
+      return res.status(400).json({ message: "region is required" });
+    }
+
+    const incident = await IncidentReport.create({
+      userId: req.user._id,
+      title: "SOS Emergency Request",
+      description,
+      incidentType,
+      severity: "critical",
+      location: {
+        region,
+        city,
+        latitude: latitude ?? null,
+        longitude: longitude ?? null,
+      },
+      impact: {
+        peopleAffected: Number(peopleAffected || 1),
+        injuriesReported: Number(injuriesReported || 0),
+        infrastructureDamage: "moderate",
+      },
+      status: "triaged",
+      operational: {
+        sourceReliability: "community",
+        priority: "p1-critical",
+        responseSlaMinutes: 15,
+        tags: ["sos", "priority"],
+      },
+      timeline: [
+        { event: "SOS triggered", actor: req.user?.name || "user", timestamp: new Date() },
+      ],
+    });
+
+    const smsMessage = `SOS ALERT ${incident._id}: Critical emergency reported in ${region}. Respond immediately.`;
+    const smsFallback = await sendSmsFallback({
+      phone: req.user?.phone || "",
+      message: smsMessage,
+      incidentId: incident._id,
+    });
+
+    incident.operational.fallbackNotification = {
+      smsAttempted: smsFallback.attempted,
+      smsStatus: smsFallback.status,
+      smsReference: smsFallback.reference,
+    };
+    incident.timeline.push({
+      event: `SMS fallback ${smsFallback.status}`,
+      actor: "system",
+      timestamp: new Date(),
+    });
+    await incident.save();
+
+    const resourcesQuery = { isActive: true, region };
+    const resources = await ResourceCenter.find(resourcesQuery).limit(50);
+
+    const refLat = Number.isFinite(Number(latitude))
+      ? Number(latitude)
+      : REGION_COORDINATES[region]?.latitude;
+    const refLng = Number.isFinite(Number(longitude))
+      ? Number(longitude)
+      : REGION_COORDINATES[region]?.longitude;
+
+    const nearestResources = resources
+      .map((resource) => {
+        const rLat = Number(resource.coordinates?.latitude);
+        const rLng = Number(resource.coordinates?.longitude);
+        if (!Number.isFinite(refLat) || !Number.isFinite(refLng) || !Number.isFinite(rLat) || !Number.isFinite(rLng)) {
+          return { ...resource.toObject(), distanceKm: null };
+        }
+        return {
+          ...resource.toObject(),
+          distanceKm: Number(getDistanceKm(refLat, refLng, rLat, rLng).toFixed(1)),
+        };
+      })
+      .sort((a, b) => {
+        if (!Number.isFinite(a.distanceKm)) return 1;
+        if (!Number.isFinite(b.distanceKm)) return -1;
+        return a.distanceKm - b.distanceKm;
+      })
+      .slice(0, 5);
+
+    res.status(201).json({
+      incidentId: incident._id,
+      status: "escalated",
+      escalationPath: ["student", "teacher", "district_authority"],
+      slaMinutes: 15,
+      smsFallback,
+      nearestResources,
+      advisory: "Stay in a safe open area if possible. Keep communication channel active.",
+    });
+  } catch (error) {
+    console.error("Error triggering SOS:", error);
+    res.status(500).json({ message: "Failed to trigger SOS" });
   }
 };
 

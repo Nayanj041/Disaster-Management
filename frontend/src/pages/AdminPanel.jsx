@@ -4,7 +4,7 @@ import { useEffect, useMemo, useState } from "react"
 import AnalyticsChart from "../components/admin/AnalyticsChart"
 import UserManagement from "../components/admin/UserManagement"
 import axiosInstance from "../lib/axios"
-import { Users, BookOpen, TrendingUp, Activity, Settings, BarChart3, PieChart, Clock, Shield } from "lucide-react"
+import { Users, BookOpen, TrendingUp, Activity, Settings, BarChart3, PieChart, Clock, Shield, Building2 } from "lucide-react"
 
 const toCsv = (rows) => {
   if (!rows.length) return "";
@@ -50,18 +50,25 @@ const AdminPanel = () => {
     avgXpTrend: [],
     avgLevelTrend: [],
   })
+  const [preparednessIndex, setPreparednessIndex] = useState({
+    statePreparednessIndex: 0,
+    regions: [],
+    topRegions: [],
+    vulnerableRegions: [],
+  })
   const [loading, setLoading] = useState(true)
 
   useEffect(() => {
     const fetchAdminData = async () => {
       try {
         setLoading(true)
-        const [statsRes, activityRes, riskMapRes, drillAnalyticsRes, trendsRes] = await Promise.all([
+        const [statsRes, activityRes, riskMapRes, drillAnalyticsRes, trendsRes, psiRes] = await Promise.all([
           axiosInstance.get("/admin/stats"),
           axiosInstance.get("/admin/activity"),
           axiosInstance.get("/risk/region-map"),
           axiosInstance.get("/risk/drill-analytics"),
           axiosInstance.get("/admin/progress-trends", { params: { days: selectedDays } }),
+          axiosInstance.get("/admin/preparedness-index", { params: { days: selectedDays } }),
         ])
 
         setStats(statsRes.data)
@@ -74,6 +81,12 @@ const AdminPanel = () => {
           moduleCompletions: Array.isArray(trendsRes.data?.moduleCompletions) ? trendsRes.data.moduleCompletions : [],
           avgXpTrend: Array.isArray(trendsRes.data?.avgXpTrend) ? trendsRes.data.avgXpTrend : [],
           avgLevelTrend: Array.isArray(trendsRes.data?.avgLevelTrend) ? trendsRes.data.avgLevelTrend : [],
+        })
+        setPreparednessIndex({
+          statePreparednessIndex: Number(psiRes.data?.statePreparednessIndex || 0),
+          regions: Array.isArray(psiRes.data?.regions) ? psiRes.data.regions : [],
+          topRegions: Array.isArray(psiRes.data?.topRegions) ? psiRes.data.topRegions : [],
+          vulnerableRegions: Array.isArray(psiRes.data?.vulnerableRegions) ? psiRes.data.vulnerableRegions : [],
         })
       } catch (error) {
         console.error("Failed to load admin data:", error)
@@ -123,6 +136,7 @@ const AdminPanel = () => {
     { id: "overview", label: "Overview", icon: BarChart3 },
     { id: "users", label: "User Management", icon: Users },
     { id: "analytics", label: "Analytics", icon: PieChart },
+    { id: "government", label: "Government", icon: Building2 },
     { id: "system", label: "System Settings", icon: Settings },
   ]
 
@@ -531,6 +545,81 @@ const AdminPanel = () => {
                     </div>
                   ))}
                 </div>
+              </div>
+            </div>
+          </div>
+        )}
+
+        {/* System Settings Tab */}
+        {activeTab === "government" && (
+          <div className="space-y-6">
+            <div className="bg-gradient-to-r from-slate-800 to-slate-900 rounded-lg shadow-sm p-6 text-white">
+              <h2 className="text-2xl font-bold mb-2">Government Control Panel</h2>
+              <p className="text-slate-200">Preparedness Score Index (PSI) and district-level resilience intelligence.</p>
+              <div className="mt-4 inline-flex rounded-lg bg-white/10 px-4 py-2 text-sm">
+                State Preparedness Index: <span className="ml-2 font-semibold">{preparednessIndex.statePreparednessIndex}</span>
+              </div>
+            </div>
+
+            <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
+              <div className="bg-white rounded-lg shadow-sm border p-6">
+                <h3 className="text-lg font-semibold text-gray-900 mb-4">Top Performing Regions</h3>
+                <div className="space-y-3">
+                  {preparednessIndex.topRegions.map((row) => (
+                    <div key={`top-${row.region}`} className="flex items-center justify-between rounded border bg-green-50 p-3">
+                      <div>
+                        <p className="font-medium text-gray-900">{row.region}</p>
+                        <p className="text-xs text-gray-600">TCR {row.trainingCompletionRate}% · DES {row.drillEffectivenessScore}</p>
+                      </div>
+                      <div className="text-lg font-bold text-green-700">{row.preparednessIndex}</div>
+                    </div>
+                  ))}
+                </div>
+              </div>
+
+              <div className="bg-white rounded-lg shadow-sm border p-6">
+                <h3 className="text-lg font-semibold text-gray-900 mb-4">Priority Intervention Regions</h3>
+                <div className="space-y-3">
+                  {preparednessIndex.vulnerableRegions.map((row) => (
+                    <div key={`risk-${row.region}`} className="flex items-center justify-between rounded border bg-red-50 p-3">
+                      <div>
+                        <p className="font-medium text-gray-900">{row.region}</p>
+                        <p className="text-xs text-gray-600">Risk Exposure {row.riskExposureWeight} · IRS {row.incidentResponseScore}</p>
+                      </div>
+                      <div className="text-lg font-bold text-red-700">{row.preparednessIndex}</div>
+                    </div>
+                  ))}
+                </div>
+              </div>
+            </div>
+
+            <div className="bg-white rounded-lg shadow-sm border p-6">
+              <h3 className="text-lg font-semibold text-gray-900 mb-4">Region-wise Preparedness Index (PSI)</h3>
+              <div className="overflow-auto">
+                <table className="w-full text-sm">
+                  <thead>
+                    <tr className="border-b text-left text-gray-600">
+                      <th className="py-2 pr-3">Region</th>
+                      <th className="py-2 pr-3">PSI</th>
+                      <th className="py-2 pr-3">Training %</th>
+                      <th className="py-2 pr-3">Drill Score</th>
+                      <th className="py-2 pr-3">Incident Response</th>
+                      <th className="py-2 pr-3">Risk Exposure</th>
+                    </tr>
+                  </thead>
+                  <tbody>
+                    {preparednessIndex.regions.map((row) => (
+                      <tr key={`psi-${row.region}`} className="border-b">
+                        <td className="py-2 pr-3 font-medium text-gray-900">{row.region}</td>
+                        <td className="py-2 pr-3 text-gray-900">{row.preparednessIndex}</td>
+                        <td className="py-2 pr-3 text-gray-700">{row.trainingCompletionRate}%</td>
+                        <td className="py-2 pr-3 text-gray-700">{row.drillEffectivenessScore}</td>
+                        <td className="py-2 pr-3 text-gray-700">{row.incidentResponseScore}</td>
+                        <td className="py-2 pr-3 text-gray-700">{row.riskExposureWeight}</td>
+                      </tr>
+                    ))}
+                  </tbody>
+                </table>
               </div>
             </div>
           </div>

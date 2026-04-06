@@ -88,22 +88,22 @@ const StudentDashboard = () => {
   const xpRemaining = xpForNextLevel - xpIntoCurrentLevel;
 
   return (
-    <div className="space-y-8 p-4 md:p-8">
+    <div className="space-y-8">
       {/* Welcome Section */}
-      <div className="bg-gradient-to-r from-primary-600 to-primary-700 rounded-lg shadow-xl p-6 md:p-8 text-black">
-        <h1 className="text-2xl md:text-3xl font-bold mb-2 ">
+      <div className="rounded-2xl bg-gradient-to-r from-primary to-cyan-700 p-6 text-primary-foreground shadow-lg md:p-8">
+        <h1 className="mb-2 text-2xl font-bold md:text-3xl">
           Welcome back, {user?.name || "Student"}!
         </h1>
-        <p className="text-primary-100 text-lg">
+        <p className="text-base text-primary-foreground/90 md:text-lg">
           You're currently Level {userStats.level} with {userStats.totalXP} XP.
           Keep learning to level up!
         </p>
-        <div className="mt-4 bg-card bg-opacity-30 rounded-full h-3">
+        <div className="mt-4 h-3 rounded-full bg-white/35">
           <div
-            className="bg-card h-3 rounded-full transition-all duration-500 ease-out"
+            className="h-3 rounded-full bg-white transition-all duration-500 ease-out"
             style={{ width: `${progressPercentage}%` }}></div>
         </div>
-        <p className="text-sm text-primary-100 mt-2">
+        <p className="mt-2 text-sm text-primary-foreground/85">
           {xpRemaining} XP to next level
         </p>
       </div>
@@ -120,7 +120,7 @@ const StudentDashboard = () => {
         {/* Current Modules */}
         <div className="lg:col-span-2 space-y-6">
           <div>
-            <h2 className="text-xl md:text-2xl font-semibold text-gray-900 mb-4">
+            <h2 className="mb-4 text-xl font-semibold text-foreground md:text-2xl">
               Current Modules
             </h2>
             <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
